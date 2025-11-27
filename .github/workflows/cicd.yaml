@@ -82,14 +82,14 @@ jobs:
           cd gitops
           
           # Update DEV overlay
-           cd kubernetes/apps/overlays/dev/helm-demo
-          sed -i "s/tag: dev-.*/tag: ${{ steps.meta.outputs.dev_tag }}/" values.yaml
+          cd kubernetes/apps/overlays/dev/helm-demo
+          sed -i "s/^  tag: .*/  tag: ${{ steps.meta.outputs.dev_tag }}/" values.yaml
           
           cd ../../../../..
           
           # Update PROD overlay
           cd kubernetes/apps/overlays/prod/helm-demo
-          sed -i "s/tag: prod-.*/tag: ${{ steps.meta.outputs.prod_tag }}/" values.yaml
+          sed -i "s/^  tag: .*/  tag: ${{ steps.meta.outputs.prod_tag }}/" values.yaml
           
           cd ../../../../..
           
