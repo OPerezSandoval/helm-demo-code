@@ -1,0 +1,117 @@
+name: CI/CD Pipeline 
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: operez11/helm-demo
+  GITOPS_REPO: operez11/homelab-gitops
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate image tags
+        id: meta
+        run: |
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          
+          DEV_TAG="dev-${SHORT_SHA}"
+          PROD_TAG="prod-${SHORT_SHA}"
+          
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "dev_tag=${DEV_TAG}" >> $GITHUB_OUTPUT
+          echo "prod_tag=${PROD_TAG}" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push DEV image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Containerfile.dev
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.dev_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push PROD image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Containerfile.prod
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.prod_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update GitOps repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITOPS_PAT }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Clone GitOps repo
+          git clone https://oauth2:${GITHUB_TOKEN}@github.com/${GITOPS_REPO}.git gitops
+          cd gitops
+          
+          # Update DEV overlay
+          cd kubernetes/apps/overlays/dev/helm-demo
+          
+          # Update image tag in kustomization.yaml
+          if grep -q "newTag:" kustomization.yaml; then
+            sed -i "s/newTag: .*/newTag: ${{ steps.meta.outputs.dev_tag }}/" kustomization.yaml
+          fi
+          
+          cd ../../../../..
+          
+          # Update PROD overlay
+          cd kubernetes/apps/overlays/prod/helm-demo
+          
+          if grep -q "newTag:" kustomization.yaml; then
+            sed -i "s/newTag: .*/newTag: ${{ steps.meta.outputs.prod_tag }}/" kustomization.yaml
+          fi
+          
+          cd ../../../../..
+          
+          # Commit and push
+          git add kubernetes/apps/overlays/*/helm-demo/kustomization.yaml
+          git commit -m "Update helm-demo images to dev-${{ steps.meta.outputs.short_sha }} and prod-${{ steps.meta.outputs.short_sha }}" || echo "No changes"
+          git push origin main
+
+      - name: Summary
+        run: |
+          echo "### Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Images Built:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Dev: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.dev_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Prod: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.prod_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit SHA:** ${{ steps.meta.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "GitOps repo updated. ArgoCD will auto-sync shortly. ⚡" >> $GITHUB_STEP_SUMMARY
