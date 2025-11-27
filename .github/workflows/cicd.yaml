@@ -9,6 +9,7 @@ on:
       - main
   workflow_dispatch:
 
+# Test new token 
 env:
   REGISTRY: docker.io
   IMAGE_NAME: operez11/helm-demo
