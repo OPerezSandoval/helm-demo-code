@@ -81,26 +81,19 @@ jobs:
           cd gitops
           
           # Update DEV overlay
-          cd kubernetes/apps/overlays/dev/helm-demo
-          
-          # Update image tag in kustomization.yaml
-          if grep -q "newTag:" kustomization.yaml; then
-            sed -i "s/newTag: .*/newTag: ${{ steps.meta.outputs.dev_tag }}/" kustomization.yaml
-          fi
+           cd kubernetes/apps/overlays/dev/helm-demo
+          sed -i "s/tag: dev-.*/tag: ${{ steps.meta.outputs.dev_tag }}/" values.yaml
           
           cd ../../../../..
           
           # Update PROD overlay
           cd kubernetes/apps/overlays/prod/helm-demo
-          
-          if grep -q "newTag:" kustomization.yaml; then
-            sed -i "s/newTag: .*/newTag: ${{ steps.meta.outputs.prod_tag }}/" kustomization.yaml
-          fi
+          sed -i "s/tag: prod-.*/tag: ${{ steps.meta.outputs.prod_tag }}/" values.yaml
           
           cd ../../../../..
           
           # Commit and push
-          git add kubernetes/apps/overlays/*/helm-demo/kustomization.yaml
+          git add kubernetes/apps/overlays/*/helm-demo/values.yaml
           git commit -m "Update helm-demo images to dev-${{ steps.meta.outputs.short_sha }} and prod-${{ steps.meta.outputs.short_sha }}" || echo "No changes"
           git push origin main
 
