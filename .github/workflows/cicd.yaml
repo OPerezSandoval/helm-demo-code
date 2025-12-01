@@ -108,4 +108,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit SHA:** ${{ steps.meta.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "GitOps repo updated. ArgoCD will auto-sync shortly. ⚡" >> $GITHUB_STEP_SUMMARY
+          echo "GitOps repo updated. ArgoCD will auto-sync shortly. " >> $GITHUB_STEP_SUMMARY
