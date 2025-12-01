@@ -335,17 +335,17 @@ def index():
     
     colors = {
         'development': {
-            'bg': 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', 
-            'accent': '#f59e0b',
-            'accent_dark': '#d97706',
-            'badge_text': '#ffffff'
-        },
+        'bg': 'linear-gradient(135deg, #00d4ff 0%, #090979 100%)',  
+        'accent': '#00f5ff',
+        'accent_dark': '#0099ff',
+        'badge_text': '#000000'
+    },
         'production': {
-            'bg': 'linear-gradient(135deg, #374151 0%, #4b5563 100%)',  
-            'accent': '#10b981',
-            'accent_dark': '#059669',
-            'badge_text': '#ffffff'
-        }
+        'bg': 'linear-gradient(135deg, #ff0080 0%, #ff8c00 100%)',  
+        'accent': '#ff1493',
+        'accent_dark': '#ff6347',
+        'badge_text': '#ffffff'
+    }
     }
     
     color_scheme = colors.get(env, {
